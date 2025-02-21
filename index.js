@@ -1,5 +1,6 @@
 const express = require('express')
 const app = express();
+const jwt = require('jsonwebtoken')
 const cors = require('cors');
 require('dotenv').config()
 const port = process.env.port || 5000;
@@ -30,19 +31,45 @@ async function run() {
 
 
 
+    // jwt
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
+      res.send({ token })
+    })
+
+    // middlewares
+    const verifyToken = ((req, res, next) => {
+      console.log('inside verify headers', req.headers);
+      if (!req.headers.authorization) {
+        return res.status(401).send({ message: 'forbidden access' })
+      }
+      const token = req.headers.authorization.split(' ')[1]
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+        if (error) {
+          return res.status(401).send({ message: 'forbidden access' })
+
+        }
+        req.decoded = decoded
+        next()
+      })
+    })
+
+
+
 
 
     // users
 
     app.get('/users', async (req, res) => {
-        console.log(req.headers)
-        const result = await usersCollection.find().toArray();
-        res.send(result)
+      console.log(req.headers)
+      const result = await usersCollection.find().toArray();
+      res.send(result)
     });
     app.get('/users', async (req, res) => {
-        console.log(req.headers)
-        const result = await usersCollection.find().toArray();
-        res.send(result)
+      console.log(req.headers)
+      const result = await usersCollection.find().toArray();
+      res.send(result)
     });
 
     // app.get('/users/admin/:email', verifyToken, async (req, res) => {
@@ -71,36 +98,36 @@ async function run() {
     //     const result = await usersCollection.updateOne(filter, updatedDoc)
     //     res.send(result)
     // })
-    app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) }
-        const result = await usersCollection.deleteOne(query);
-        res.send(result)
+    app.delete('/users/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await usersCollection.deleteOne(query);
+      res.send(result)
     })
     app.post('/users', async (req, res) => {
-        const user = req.body;
-        const query = { email: user.email }
-        const existingUser = await usersCollection.findOne(query)
-        if (existingUser) {
-            return res.send({ message: 'user already exists', insertedId: null })
-        }
-        const result = await usersCollection.insertOne(user);
-        res.send(result)
+      const user = req.body;
+      const query = { email: user.email }
+      const existingUser = await usersCollection.findOne(query)
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result)
     })
 
 
 
 
-    app.post('/users', async (req, res) => {
-        const user = req.body;
-        const query = { email: user.email }
-        const existingUser = await usersCollection.findOne(query)
-        if (existingUser) {
-            return res.send({ message: 'user already exists', insertedId: null })
-        }
-        const result = await usersCollection.insertOne(user);
-        res.send(result)
-    })
+    // app.post('/users', async (req, res) => {
+    //   const user = req.body;
+    //   const query = { email: user.email }
+    //   const existingUser = await usersCollection.findOne(query)
+    //   if (existingUser) {
+    //     return res.send({ message: 'user already exists', insertedId: null })
+    //   }
+    //   const result = await usersCollection.insertOne(user);
+    //   res.send(result)
+    // })
 
 
 
@@ -113,13 +140,13 @@ async function run() {
 
 
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
-    await client.close();
+    // await client.close();
   }
 }
 run().catch(console.dir);
@@ -127,9 +154,9 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('task manager is live');
+  res.send('task manager is live');
 })
 
 app.listen(port, () => {
-    console.log(`Task Manger is sitting on Port ${port}`);
+  console.log(`Task Manger is sitting on Port ${port}`);
 })
