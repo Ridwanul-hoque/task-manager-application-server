@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken')
 const cors = require('cors');
 require('dotenv').config()
 const port = process.env.port || 5000;
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 
 
@@ -27,7 +27,13 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
+
+
+
+
+
     const usersCollection = client.db("Task-manager").collection("users")
+    const taskcollection = client.db("Task-manager").collection("tasks")
 
 
 
@@ -129,6 +135,73 @@ async function run() {
     //   res.send(result)
     // })
 
+
+
+
+
+    // tasks
+    app.post('/tasks', async (req, res) => {
+      const { title, description, category } = req.body;
+
+      if (!title || title.length > 50) {
+        return res.status(400).send({ message: "Title is required and must be 50 characters or less." });
+      }
+
+      if (description && description.length > 200) {
+        return res.status(400).send({ message: "Description must be 200 characters or less." });
+      }
+
+      const newTask = {
+        title,
+        description: description || '',
+        timestamp: new Date().toISOString(),
+        category
+      };
+
+      const result = await taskcollection.insertOne(newTask);
+      res.send(result);
+    });
+
+
+
+
+    app.get("/tasks", async (req, res) => {
+      const tasks = await taskcollection.find().toArray();
+      res.send(tasks);
+    });
+
+    // app.put("/tasks/:id", async (req, res) => {
+    //   const { id } = req.params;
+    //   const updatedTask = req.body;
+    //   const result = await taskcollection.updateOne({ _id: new ObjectId(id) }, { $set: updatedTask });
+    //   res.send(result);
+    // });
+
+    app.delete("/tasks/:id", async (req, res) => {
+      const { id } = req.params;
+      const result = await taskcollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    app.post("/tasks/reorder", async (req, res) => {
+      const updatedTasks = req.body;
+      updatedTasks.forEach(async (task) => {
+        await taskcollection.updateOne({ _id: new ObjectId(task._id) }, { $set: { order: task.order } });
+      });
+      res.send({ message: "Tasks reordered" });
+    });
+
+    app.put('/tasks/:id', async (req, res) => {
+      const id = req.params.id;
+      const { _id, ...updatedTask } = req.body; // Exclude _id from the update
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = { $set: updatedTask };
+  
+      const result = await taskcollection.updateOne(filter, updateDoc);
+      res.send(result);
+  });
+
+    
 
 
 
