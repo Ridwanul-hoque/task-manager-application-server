@@ -140,6 +140,28 @@ async function run() {
 
 
     // tasks
+    // app.post('/tasks', async (req, res) => {
+    //   const { title, description, category } = req.body;
+
+    //   if (!title || title.length > 50) {
+    //     return res.status(400).send({ message: "Title is required and must be 50 characters or less." });
+    //   }
+
+    //   if (description && description.length > 200) {
+    //     return res.status(400).send({ message: "Description must be 200 characters or less." });
+    //   }
+
+    //   const newTask = {
+    //     title,
+    //     description: description || '',
+    //     timestamp: new Date().toISOString(),
+    //     category
+    //   };
+
+    //   const result = await taskcollection.insertOne(newTask);
+    //   res.send(result);
+    // });
+
     app.post('/tasks', async (req, res) => {
       const { title, description, category } = req.body;
 
@@ -151,11 +173,16 @@ async function run() {
         return res.status(400).send({ message: "Description must be 200 characters or less." });
       }
 
+      // Get the highest position in the category
+      const lastTask = await taskcollection.find({ category }).sort({ position: -1 }).limit(1).toArray();
+      const newPosition = lastTask.length > 0 ? lastTask[0].position + 1 : 0;
+
       const newTask = {
         title,
         description: description || '',
         timestamp: new Date().toISOString(),
-        category
+        category,
+        position: newPosition
       };
 
       const result = await taskcollection.insertOne(newTask);
@@ -164,11 +191,16 @@ async function run() {
 
 
 
-
-    app.get("/tasks", async (req, res) => {
-      const tasks = await taskcollection.find().toArray();
+    app.get('/tasks', async (req, res) => {
+      const tasks = await taskcollection.find().sort({ category: 1, position: 1 }).toArray();
       res.send(tasks);
     });
+
+
+    // app.get("/tasks", async (req, res) => {
+    //   const tasks = await taskcollection.find().toArray();
+    //   res.send(tasks);
+    // });
 
     // app.put("/tasks/:id", async (req, res) => {
     //   const { id } = req.params;
@@ -183,25 +215,33 @@ async function run() {
       res.send(result);
     });
 
-    app.post("/tasks/reorder", async (req, res) => {
-      const updatedTasks = req.body;
-      updatedTasks.forEach(async (task) => {
-        await taskcollection.updateOne({ _id: new ObjectId(task._id) }, { $set: { order: task.order } });
-      });
-      res.send({ message: "Tasks reordered" });
+    app.patch('/tasks/reorder', async (req, res) => {
+      const { updatedTasks } = req.body;
+
+      const bulkOps = updatedTasks.map((task, index) => ({
+        updateOne: {
+          filter: { _id: new ObjectId(task._id) },
+          update: { $set: { position: index } }
+        }
+      }));
+
+      const result = await taskcollection.bulkWrite(bulkOps);
+      res.send(result);
     });
+
+
 
     app.put('/tasks/:id', async (req, res) => {
       const id = req.params.id;
       const { _id, ...updatedTask } = req.body; // Exclude _id from the update
       const filter = { _id: new ObjectId(id) };
       const updateDoc = { $set: updatedTask };
-  
+
       const result = await taskcollection.updateOne(filter, updateDoc);
       res.send(result);
-  });
+    });
 
-    
+
 
 
 
