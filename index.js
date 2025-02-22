@@ -162,8 +162,35 @@ async function run() {
     //   res.send(result);
     // });
 
+    // app.post('/tasks', async (req, res) => {
+    //   const { title, description, category } = req.body;
+
+    //   if (!title || title.length > 50) {
+    //     return res.status(400).send({ message: "Title is required and must be 50 characters or less." });
+    //   }
+
+    //   if (description && description.length > 200) {
+    //     return res.status(400).send({ message: "Description must be 200 characters or less." });
+    //   }
+
+    //   // Get the highest position in the category
+    //   const lastTask = await taskcollection.find({ category }).sort({ position: -1 }).limit(1).toArray();
+    //   const newPosition = lastTask.length > 0 ? lastTask[0].position + 1 : 0;
+
+    //   const newTask = {
+    //     title,
+    //     description: description || '',
+    //     timestamp: new Date().toISOString(),
+    //     category,
+    //     position: newPosition
+    //   };
+
+    //   const result = await taskcollection.insertOne(newTask);
+    //   res.send(result);
+    // });
+
     app.post('/tasks', async (req, res) => {
-      const { title, description, category } = req.body;
+      const { title, description, category, email } = req.body;
 
       if (!title || title.length > 50) {
         return res.status(400).send({ message: "Title is required and must be 50 characters or less." });
@@ -171,6 +198,10 @@ async function run() {
 
       if (description && description.length > 200) {
         return res.status(400).send({ message: "Description must be 200 characters or less." });
+      }
+
+      if (!email) {
+        return res.status(400).send({ message: "User email is required." });
       }
 
       // Get the highest position in the category
@@ -182,7 +213,8 @@ async function run() {
         description: description || '',
         timestamp: new Date().toISOString(),
         category,
-        position: newPosition
+        position: newPosition,
+        email // Store the user's email
       };
 
       const result = await taskcollection.insertOne(newTask);
@@ -191,16 +223,26 @@ async function run() {
 
 
 
-    app.get('/tasks', async (req, res) => {
-      const tasks = await taskcollection.find().sort({ category: 1, position: 1 }).toArray();
-      res.send(tasks);
-    });
-
-
-    // app.get("/tasks", async (req, res) => {
-    //   const tasks = await taskcollection.find().toArray();
+    // app.get('/tasks', async (req, res) => {
+    //   const tasks = await taskcollection.find().sort({ category: 1, position: 1 }).toArray();
     //   res.send(tasks);
     // });
+    //   app.get("/tasks", async (req, res) => {
+    //     const email = req.query.email;  // Get the logged-in user's email from query params
+    //     if (!email) {
+    //         return res.status(400).send({ message: "User email is required." });
+    //     }
+
+    //     const tasks = await taskcollection.find({ email }).sort({ category: 1, position: 1 }).toArray();
+    //     res.send(tasks);
+    // });
+
+
+
+    app.get("/tasks", async (req, res) => {
+      const tasks = await taskcollection.find().toArray();
+      res.send(tasks);
+    });
 
     // app.put("/tasks/:id", async (req, res) => {
     //   const { id } = req.params;
@@ -240,6 +282,9 @@ async function run() {
       const result = await taskcollection.updateOne(filter, updateDoc);
       res.send(result);
     });
+
+
+    
 
 
 
